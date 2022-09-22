@@ -176,7 +176,15 @@ bool CheckProofOfWork(const CBlockHeader& block, const Consensus::Params& params
         return false;
     }
 
-
+    //Check that the submited n is not a perfect square, this could lead to a degradation in the asic/fpga/gpu resistance.
+    mpz_mul(n_check, nP1, nP1);
+    if  (mpz_cmp(n_check, n) == 0) {
+        mpz_clear(n);
+        mpz_clear(nP1);    
+        mpz_clear(n_check);
+        return false;
+    }
+   
     //Clear memory
     mpz_clear(n);
     mpz_clear(n_check);
