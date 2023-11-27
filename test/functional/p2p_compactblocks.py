@@ -412,9 +412,7 @@ class CompactBlocksTest(BitcoinTestFramework):
             if announce == "inv":
                 test_node.send_message(msg_inv([CInv(MSG_BLOCK, block.sha256)]))
                 test_node.wait_until(lambda: "getheaders" in test_node.last_message, timeout=30)
-                test_node.send_header_for_blocks([block])
-            else:
-                test_node.send_header_for_blocks([block])
+            test_node.send_header_for_blocks([block])
             test_node.wait_for_getdata([block.sha256], timeout=30)
             assert_equal(test_node.last_message["getdata"].inv[0].type, 4)
 
@@ -436,10 +434,7 @@ class CompactBlocksTest(BitcoinTestFramework):
             assert_equal(absolute_indexes, [0])  # should be a coinbase request
 
             # Send the coinbase, and verify that the tip advances.
-            if version == 2:
-                msg = msg_blocktxn()
-            else:
-                msg = msg_no_witness_blocktxn()
+            msg = msg_blocktxn() if version == 2 else msg_no_witness_blocktxn()
             msg.block_transactions.blockhash = block.sha256
             msg.block_transactions.transactions = [block.vtx[0]]
             test_node.send_and_ping(msg)
@@ -594,8 +589,10 @@ class CompactBlocksTest(BitcoinTestFramework):
 
         # We should receive a getdata request
         test_node.wait_for_getdata([block.sha256], timeout=10)
-        assert test_node.last_message["getdata"].inv[0].type == MSG_BLOCK or \
-               test_node.last_message["getdata"].inv[0].type == MSG_BLOCK | MSG_WITNESS_FLAG
+        assert test_node.last_message["getdata"].inv[0].type in [
+            MSG_BLOCK,
+            MSG_BLOCK | MSG_WITNESS_FLAG,
+        ]
 
         # Deliver the block
         if version == 2:
@@ -612,7 +609,7 @@ class CompactBlocksTest(BitcoinTestFramework):
         MAX_GETBLOCKTXN_DEPTH = 10
         chain_height = node.getblockcount()
         current_height = chain_height
-        while (current_height >= chain_height - MAX_GETBLOCKTXN_DEPTH):
+        while current_height >= current_height - MAX_GETBLOCKTXN_DEPTH:
             block_hash = node.getblockhash(current_height)
             block = from_hex(CBlock(), node.getblock(block_hash, False))
 

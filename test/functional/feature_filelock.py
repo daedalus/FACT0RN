@@ -38,7 +38,15 @@ class FilelockTest(BitcoinTestFramework):
                     expected_msg = "Error: SQLiteDatabase: Unable to obtain an exclusive lock on the database, is it being used by another bitcoind?"
                 else:
                     expected_msg = "Error: Error initializing wallet database environment"
-                self.nodes[1].assert_start_raises_init_error(extra_args=['-walletdir={}'.format(wallet_dir), '-wallet=' + wallet_name, '-noserver'], expected_msg=expected_msg, match=ErrorMatch.PARTIAL_REGEX)
+                self.nodes[1].assert_start_raises_init_error(
+                    extra_args=[
+                        '-walletdir={}'.format(wallet_dir),
+                        f'-wallet={wallet_name}',
+                        '-noserver',
+                    ],
+                    expected_msg=expected_msg,
+                    match=ErrorMatch.PARTIAL_REGEX,
+                )
 
             if self.is_bdb_compiled():
                 check_wallet_filelock(False)

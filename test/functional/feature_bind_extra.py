@@ -49,15 +49,8 @@ class BindExtraTest(BitcoinTestFramework):
         port = PORT_MIN + 2 * PORT_RANGE
 
         # Array of tuples [command line arguments, expected bind addresses].
-        self.expected = []
+        self.expected = [[[f"-bind=127.0.0.1:{port}=onion"], [(loopback_ipv4, port)]]]
 
-        # Node0, no normal -bind=... with -bind=...=onion, thus only the tor target.
-        self.expected.append(
-            [
-                [f"-bind=127.0.0.1:{port}=onion"],
-                [(loopback_ipv4, port)]
-            ],
-        )
         port += 1
 
         # Node1, both -bind=... and -bind=...=onion.

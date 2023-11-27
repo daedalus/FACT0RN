@@ -53,7 +53,11 @@ def parse_makefile(makefile):
 def set_common_properties(toolset):
     with open(os.path.join(SOURCE_DIR, '../build_msvc/common.init.vcxproj'), 'r', encoding='utf-8') as rfile:
         s = rfile.read()
-        s = re.sub('<PlatformToolset>.*?</PlatformToolset>', '<PlatformToolset>'+toolset+'</PlatformToolset>', s)
+        s = re.sub(
+            '<PlatformToolset>.*?</PlatformToolset>',
+            f'<PlatformToolset>{toolset}</PlatformToolset>',
+            s,
+        )
     with open(os.path.join(SOURCE_DIR, '../build_msvc/common.init.vcxproj'), 'w', encoding='utf-8',newline='\n') as wfile:
         wfile.write(s)
 
@@ -69,13 +73,18 @@ def main():
         if 'Makefile' in makefile_name:
             parse_makefile(os.path.join(SOURCE_DIR, makefile_name))
     for key, value in lib_sources.items():
-        vcxproj_filename = os.path.abspath(os.path.join(os.path.dirname(__file__), key, key + '.vcxproj'))
+        vcxproj_filename = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), key, f'{key}.vcxproj')
+        )
         content = ''
         for source_filename, object_filename in value:
             content += '    <ClCompile Include="..\\..\\src\\' + source_filename + '">\n'
-            content += '      <ObjectFileName>$(IntDir)' + object_filename + '</ObjectFileName>\n'
+            content += (
+                f'      <ObjectFileName>$(IntDir){object_filename}'
+                + '</ObjectFileName>\n'
+            )
             content += '    </ClCompile>\n'
-        with open(vcxproj_filename + '.in', 'r', encoding='utf-8') as vcxproj_in_file:
+        with open(f'{vcxproj_filename}.in', 'r', encoding='utf-8') as vcxproj_in_file:
             with open(vcxproj_filename, 'w', encoding='utf-8') as vcxproj_file:
                 vcxproj_file.write(vcxproj_in_file.read().replace(
                     '@SOURCE_FILES@\n', content))

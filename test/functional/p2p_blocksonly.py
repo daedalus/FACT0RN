@@ -41,7 +41,7 @@ class P2PBlocksOnly(BitcoinTestFramework):
         assert_equal(self.nodes[0].getpeerinfo()[0]['relaytxes'], True)
 
         assert_equal(self.nodes[0].testmempoolaccept([tx_hex])[0]['allowed'], True)
-        with self.nodes[0].assert_debug_log(['received getdata for: wtx {} peer=1'.format(wtxid)]):
+        with self.nodes[0].assert_debug_log([f'received getdata for: wtx {wtxid} peer=1']):
             self.nodes[0].sendrawtransaction(tx_hex)
             tx_relay_peer.wait_for_tx(txid)
             assert_equal(self.nodes[0].getmempoolinfo()['size'], 1)

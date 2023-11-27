@@ -7,6 +7,7 @@
 Generate chains with block versions that appear to be signalling unknown
 soft-forks, and test that warning alerts are generated.
 """
+
 import os
 import re
 
@@ -21,7 +22,9 @@ VB_TOP_BITS = 0x20000000
 VB_UNKNOWN_BIT = 27       # Choose a bit unassigned to any deployment
 VB_UNKNOWN_VERSION = VB_TOP_BITS | (1 << VB_UNKNOWN_BIT)
 
-WARN_UNKNOWN_RULES_ACTIVE = "Unknown new rules activated (versionbit {})".format(VB_UNKNOWN_BIT)
+WARN_UNKNOWN_RULES_ACTIVE = (
+    f"Unknown new rules activated (versionbit {VB_UNKNOWN_BIT})"
+)
 VB_PATTERN = re.compile("Unknown new rules activated.*versionbit")
 
 class VersionBitsWarningTest(BitcoinTestFramework):

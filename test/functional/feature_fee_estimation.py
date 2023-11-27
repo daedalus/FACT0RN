@@ -71,8 +71,8 @@ def small_txpuzzle_randfee(from_node, conflist, unconflist, amount, min_fee, fee
             t = unconflist.pop(0)
             total_in += t["amount"]
             tx.vin.append(CTxIn(COutPoint(int(t["txid"], 16), t["vout"]), b""))
-        if total_in <= amount + fee:
-            raise RuntimeError("Insufficient funds: need %d, have %d" % (amount + fee, total_in))
+    if total_in <= amount + fee:
+        raise RuntimeError("Insufficient funds: need %d, have %d" % (amount + fee, total_in))
     tx.vout.append(CTxOut(int((total_in - amount - fee) * COIN), P2SH_1))
     tx.vout.append(CTxOut(int(amount * COIN), P2SH_2))
     # These transactions don't need to be signed, but we still have to insert
@@ -226,21 +226,17 @@ class EstimateFeeTest(BitcoinTestFramework):
         while len(self.nodes[0].getrawmempool()) > 0:
             self.nodes[0].generate(1)
 
-        # Repeatedly split those 2 outputs, doubling twice for each rep
-        # Use txouts to monitor the available utxo, since these won't be tracked in wallet
-        reps = 0
-        while reps < 5:
+        for _ in range(5):
             # Double txouts to txouts2
-            while len(self.txouts) > 0:
+            while self.txouts:
                 split_inputs(self.nodes[0], self.txouts, self.txouts2)
             while len(self.nodes[0].getrawmempool()) > 0:
                 self.nodes[0].generate(1)
             # Double txouts2 to txouts
-            while len(self.txouts2) > 0:
+            while self.txouts2:
                 split_inputs(self.nodes[0], self.txouts2, self.txouts)
             while len(self.nodes[0].getrawmempool()) > 0:
                 self.nodes[0].generate(1)
-            reps += 1
         self.log.info("Finished splitting")
 
         # Now we can connect the other nodes, didn't want to connect them earlier
@@ -274,7 +270,7 @@ class EstimateFeeTest(BitcoinTestFramework):
         while len(self.nodes[1].getrawmempool()) > 0:
             self.nodes[1].generate(1)
 
-        self.sync_blocks(self.nodes[0:3], wait=.1)
+        self.sync_blocks(self.nodes[:3], wait=.1)
         self.log.info("Final estimates after emptying mempools")
         check_estimates(self.nodes[1], self.fees_per_kb)
 

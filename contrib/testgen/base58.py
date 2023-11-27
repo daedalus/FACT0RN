@@ -74,14 +74,11 @@ def b58decode(v, length = None):
         break
 
     result = bytes(nPad) + result
-    if length is not None and len(result) != length:
-        return None
-
-    return result
+    return None if length is not None and len(result) != length else result
 
 def checksum(v):
     """Return 32-bit checksum based on SHA256"""
-    return SHA256.new(SHA256.new(v).digest()).digest()[0:4]
+    return SHA256.new(SHA256.new(v).digest()).digest()[:4]
 
 def b58encode_chk(v):
     """b58encode a string, with 32-bit checksum"""
@@ -92,18 +89,12 @@ def b58decode_chk(v):
     result = b58decode(v)
     if result is None:
         return None
-    if result[-4:] == checksum(result[:-4]):
-        return result[:-4]
-    else:
-        return None
+    return result[:-4] if result[-4:] == checksum(result[:-4]) else None
 
 def get_bcaddress_version(strAddress):
     """ Returns None if strAddress is invalid.  Otherwise returns integer version of address. """
     addr = b58decode_chk(strAddress)
-    if addr is None or len(addr)!=21:
-        return None
-    version = addr[0]
-    return ord(version)
+    return None if addr is None or len(addr)!=21 else ord(addr[0])
 
 if __name__ == '__main__':
     # Test case (from http://gitorious.org/bitcoin/python-base58.git)

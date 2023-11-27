@@ -159,8 +159,8 @@ def check_version(max_versions, version, arch) -> bool:
     else:
         lib = version
         ver = '0'
-    ver = tuple([int(x) for x in ver.split('.')])
-    if not lib in max_versions:
+    ver = tuple(int(x) for x in ver.split('.'))
+    if lib not in max_versions:
         return False
     if isinstance(max_versions[lib], tuple):
         return ver <= max_versions[lib]
@@ -178,7 +178,7 @@ def check_imported_symbols(filename) -> bool:
         sym = symbol.name.decode()
         version = symbol.version.decode() if symbol.version is not None else None
         if version and not check_version(MAX_VERSIONS, version, elf.hdr.e_machine):
-            print('{}: symbol {} from unsupported version {}'.format(filename, cppfilt(sym), version))
+            print(f'{filename}: symbol {cppfilt(sym)} from unsupported version {version}')
             ok = False
     return ok
 
@@ -192,7 +192,7 @@ def check_exported_symbols(filename) -> bool:
         sym = symbol.name.decode()
         if elf.hdr.e_machine == pixie.EM_RISCV or sym in IGNORE_EXPORTS:
             continue
-        print('{}: export of symbol {} not allowed'.format(filename, cppfilt(sym)))
+        print(f'{filename}: export of symbol {cppfilt(sym)} not allowed')
         ok = False
     return ok
 
@@ -202,7 +202,7 @@ def check_ELF_libraries(filename) -> bool:
     for library_name in elf.query_dyn_tags(pixie.DT_NEEDED):
         assert(isinstance(library_name, bytes))
         if library_name.decode() not in ELF_ALLOWED_LIBRARIES:
-            print('{}: NEEDED library {} is not allowed'.format(filename, library_name.decode()))
+            print(f'{filename}: NEEDED library {library_name.decode()} is not allowed')
             ok = False
     return ok
 
@@ -218,15 +218,11 @@ def check_MACHO_libraries(filename) -> bool:
 
 def check_MACHO_min_os(filename) -> bool:
     binary = lief.parse(filename)
-    if binary.build_version.minos == [10,14,0]:
-        return True
-    return False
+    return binary.build_version.minos == [10,14,0]
 
 def check_MACHO_sdk(filename) -> bool:
     binary = lief.parse(filename)
-    if binary.build_version.sdk == [10, 15, 6]:
-        return True
-    return False
+    return binary.build_version.sdk == [10, 15, 6]
 
 def check_PE_libraries(filename) -> bool:
     ok: bool = True
@@ -241,9 +237,7 @@ def check_PE_subsystem_version(filename) -> bool:
     binary = lief.parse(filename)
     major: int = binary.optional_header.major_subsystem_version
     minor: int = binary.optional_header.minor_subsystem_version
-    if major == 6 and minor == 1:
-        return True
-    return False
+    return major == 6 and minor == 1
 
 CHECKS = {
 'ELF': [
@@ -283,11 +277,9 @@ if __name__ == '__main__':
                 retval = 1
                 continue
 
-            failed: List[str] = []
-            for (name, func) in CHECKS[etype]:
-                if not func(filename):
-                    failed.append(name)
-            if failed:
+            if failed := [
+                name for name, func in CHECKS[etype] if not func(filename)
+            ]:
                 print(f'{filename}: failed {" ".join(failed)}')
                 retval = 1
         except IOError:

@@ -114,9 +114,10 @@ class ProxyTest(BitcoinTestFramework):
                 assert_equal(peer["network"], network)
 
     def node_test(self, node, proxies, auth, test_onion=True):
-        rv = []
         addr = "15.61.23.23:1234"
-        self.log.debug("Test: outgoing IPv4 connection through node for address {}".format(addr))
+        self.log.debug(
+            f"Test: outgoing IPv4 connection through node for address {addr}"
+        )
         node.addnode(addr, "onetry")
         cmd = proxies[0].queue.get()
         assert isinstance(cmd, Socks5Command)
@@ -127,12 +128,14 @@ class ProxyTest(BitcoinTestFramework):
         if not auth:
             assert_equal(cmd.username, None)
             assert_equal(cmd.password, None)
-        rv.append(cmd)
+        rv = [cmd]
         self.network_test(node, addr, network=NET_IPV4)
 
         if self.have_ipv6:
             addr = "[1233:3432:2434:2343:3234:2345:6546:4534]:5443"
-            self.log.debug("Test: outgoing IPv6 connection through node for address {}".format(addr))
+            self.log.debug(
+                f"Test: outgoing IPv6 connection through node for address {addr}"
+            )
             node.addnode(addr, "onetry")
             cmd = proxies[1].queue.get()
             assert isinstance(cmd, Socks5Command)
@@ -148,7 +151,9 @@ class ProxyTest(BitcoinTestFramework):
 
         if test_onion:
             addr = "pg6mmjiyjmcrsslvykfwnntlaru7p5svn6y2ymmju6nubxndf4pscryd.onion:8333"
-            self.log.debug("Test: outgoing onion connection through node for address {}".format(addr))
+            self.log.debug(
+                f"Test: outgoing onion connection through node for address {addr}"
+            )
             node.addnode(addr, "onetry")
             cmd = proxies[2].queue.get()
             assert isinstance(cmd, Socks5Command)
@@ -162,7 +167,9 @@ class ProxyTest(BitcoinTestFramework):
             self.network_test(node, addr, network=NET_ONION)
 
         addr = "node.noumenon:8333"
-        self.log.debug("Test: outgoing DNS name connection through node for address {}".format(addr))
+        self.log.debug(
+            f"Test: outgoing DNS name connection through node for address {addr}"
+        )
         node.addnode(addr, "onetry")
         cmd = proxies[3].queue.get()
         assert isinstance(cmd, Socks5Command)
@@ -187,7 +194,7 @@ class ProxyTest(BitcoinTestFramework):
         # -proxy plus -onion, -proxyrandomize
         rv = self.node_test(self.nodes[2], [self.serv2, self.serv2, self.serv2, self.serv2], True)
         # Check that credentials as used for -proxyrandomize connections are unique
-        credentials = set((x.username,x.password) for x in rv)
+        credentials = {(x.username,x.password) for x in rv}
         assert_equal(len(credentials), len(rv))
 
         if self.have_ipv6:
@@ -245,10 +252,7 @@ class ProxyTest(BitcoinTestFramework):
             n3 = networks_dict(self.nodes[3].getnetworkinfo())
             assert_equal(NETWORKS, n3.keys())
             for net in NETWORKS:
-                if net == NET_I2P:
-                    expected_proxy = ''
-                else:
-                    expected_proxy = '[%s]:%i' % (self.conf3.addr)
+                expected_proxy = '' if net == NET_I2P else '[%s]:%i' % (self.conf3.addr)
                 assert_equal(n3[net]['proxy'], expected_proxy)
                 assert_equal(n3[net]['proxy_randomize_credentials'], False)
             assert_equal(n3['onion']['reachable'], False)

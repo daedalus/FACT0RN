@@ -76,8 +76,8 @@ class ELFRecord(types.SimpleNamespace):
 def BiStruct(chars: str) -> Dict[int, struct.Struct]:
     '''Compile a struct parser for both endians.'''
     return {
-        ELFDATA2LSB: struct.Struct('<' + chars),
-        ELFDATA2MSB: struct.Struct('>' + chars),
+        ELFDATA2LSB: struct.Struct(f'<{chars}'),
+        ELFDATA2MSB: struct.Struct(f'>{chars}'),
     }
 
 class ELFHeader(ELFRecord):
@@ -89,7 +89,7 @@ class ELFHeader(ELFRecord):
 
     def __init__(self, data: bytes, offset: int) -> None:
         self.e_ident = data[offset:offset + EI_NIDENT]
-        if self.e_ident[0:4] != b'\x7fELF':
+        if self.e_ident[:4] != b'\x7fELF':
             raise ValueError('invalid ELF magic')
         self.ei_class = self.e_ident[EI_CLASS]
         self.ei_data = self.e_ident[EI_DATA]
@@ -204,11 +204,13 @@ VERSYM_S = BiStruct('H') # .gnu_version section has a single 16-bit integer per 
 def _parse_symbol_table(section: Section, strings: bytes, eh: ELFHeader, versym: bytes, verneed: Dict[int, bytes]) -> List[Symbol]:
     '''Parse symbol table, return a list of symbols.'''
     data = section.contents()
-    symbols = []
     versym_iter = (verneed.get(v[0]) for v in VERSYM_S[eh.ei_data].iter_unpack(versym))
-    for ofs, version in zip(range(0, len(data), section.sh_entsize), versym_iter):
-        symbols.append(Symbol(data, ofs, eh, section, strings, version))
-    return symbols
+    return [
+        Symbol(data, ofs, eh, section, strings, version)
+        for ofs, version in zip(
+            range(0, len(data), section.sh_entsize), versym_iter
+        )
+    ]
 
 def _parse_verneed(section: Section, strings: bytes, eh: ELFHeader) -> Dict[int, bytes]:
     '''Parse .gnu.version_r section, return a dictionary of {versym: 'GLIBC_...'}.'''
@@ -284,12 +286,11 @@ class ELFFile:
                 verneed = _parse_verneed(section, strtab, self.hdr)
         assert verneed is not None
 
-        # then, correlate GNU versym sections with dynamic symbol sections
-        versym = {}
-        for section in self.sections:
-            if section.sh_type == SHT_GNU_versym:
-                versym[section.sh_link] = section
-
+        versym = {
+            section.sh_link: section
+            for section in self.sections
+            if section.sh_type == SHT_GNU_versym
+        }
         # finally, load dynsym sections
         self.dyn_symbols = []
         for idx, section in enumerate(self.sections):
@@ -300,17 +301,18 @@ class ELFFile:
 
     def _load_dyn_tags(self) -> None:
         self.dyn_tags = []
-        for idx, section in enumerate(self.sections):
+        for section in self.sections:
             if section.sh_type == SHT_DYNAMIC: # find dynamic tag tables
                 strtab = self.sections[section.sh_link].contents() # associated string table
                 self.dyn_tags += _parse_dyn_tags(section, strtab, self.hdr)
 
     def _section_to_segment_mapping(self) -> None:
         for ph in self.program_headers:
-            ph.sections = []
-            for section in self.sections:
-                if ph.p_vaddr <= section.sh_addr < (ph.p_vaddr + ph.p_memsz):
-                    ph.sections.append(section)
+            ph.sections = [
+                section
+                for section in self.sections
+                if ph.p_vaddr <= section.sh_addr < (ph.p_vaddr + ph.p_memsz)
+            ]
 
     def query_dyn_tags(self, tag_in: int) -> List[Union[int, bytes]]:
         '''Return the values of all dyn tags with the specified tag.'''

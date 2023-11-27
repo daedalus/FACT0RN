@@ -239,11 +239,14 @@ class ReplaceByFeeTest(BitcoinTestFramework):
             txid = int(txid, 16)
 
             for i, txout in enumerate(tx.vout):
-                for x in branch(COutPoint(txid, i), txout_value,
-                                  max_txs,
-                                  tree_width=tree_width, fee=fee,
-                                  _total_txs=_total_txs):
-                    yield x
+                yield from branch(
+                    COutPoint(txid, i),
+                    txout_value,
+                    max_txs,
+                    tree_width=tree_width,
+                    fee=fee,
+                    _total_txs=_total_txs,
+                )
 
         fee = int(0.0001 * COIN)
         n = MAX_REPLACEMENT_LIMIT
@@ -380,10 +383,10 @@ class ReplaceByFeeTest(BitcoinTestFramework):
         fee = int(0.0001 * COIN)
         split_value = int((initial_nValue - fee) / (MAX_REPLACEMENT_LIMIT + 1))
 
-        outputs = []
-        for _ in range(MAX_REPLACEMENT_LIMIT + 1):
-            outputs.append(CTxOut(split_value, CScript([1])))
-
+        outputs = [
+            CTxOut(split_value, CScript([1]))
+            for _ in range(MAX_REPLACEMENT_LIMIT + 1)
+        ]
         splitting_tx = CTransaction()
         splitting_tx.vin = [CTxIn(utxo, nSequence=0)]
         splitting_tx.vout = outputs
@@ -404,9 +407,10 @@ class ReplaceByFeeTest(BitcoinTestFramework):
         # Need a big enough fee to cover all spending transactions and have
         # a higher fee rate
         double_spend_value = (split_value - 100 * fee) * (MAX_REPLACEMENT_LIMIT + 1)
-        inputs = []
-        for i in range(MAX_REPLACEMENT_LIMIT + 1):
-            inputs.append(CTxIn(COutPoint(txid, i), nSequence=0))
+        inputs = [
+            CTxIn(COutPoint(txid, i), nSequence=0)
+            for i in range(MAX_REPLACEMENT_LIMIT + 1)
+        ]
         double_tx = CTransaction()
         double_tx.vin = inputs
         double_tx.vout = [CTxOut(double_spend_value, CScript([b'a']))]
@@ -417,7 +421,7 @@ class ReplaceByFeeTest(BitcoinTestFramework):
 
         # If we remove an input, it should pass
         double_tx = CTransaction()
-        double_tx.vin = inputs[0:-1]
+        double_tx.vin = inputs[:-1]
         double_tx.vout = [CTxOut(double_spend_value, CScript([b'a']))]
         double_tx_hex = double_tx.serialize().hex()
         self.nodes[0].sendrawtransaction(double_tx_hex, 0)

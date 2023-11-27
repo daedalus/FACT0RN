@@ -50,7 +50,7 @@ class RESTTest (BitcoinTestFramework):
         self.skip_if_no_wallet()
 
     def test_rest_request(self, uri, http_method='GET', req_type=ReqType.JSON, body='', status=200, ret_type=RetType.JSON):
-        rest_uri = '/rest' + uri
+        rest_uri = f'/rest{uri}'
         if req_type == ReqType.JSON:
             rest_uri += '.json'
         elif req_type == ReqType.BIN:

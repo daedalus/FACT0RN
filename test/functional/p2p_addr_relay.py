@@ -35,12 +35,12 @@ class AddrReceiver(P2PInterface):
     def on_addr(self, message):
         for addr in message.addrs:
             self.num_ipv4_received += 1
-            if(self.test_addr_contents):
+            if self.test_addr_contents:
                 # relay_tests checks the content of the addr messages match
                 # expectations based on the message creation in setup_addr_msg
                 assert_equal(addr.nServices, 9)
                 if not 8333 <= addr.port < 8343:
-                    raise AssertionError("Invalid addr.port of {} (8333-8342 expected)".format(addr.port))
+                    raise AssertionError(f"Invalid addr.port of {addr.port} (8333-8342 expected)")
                 assert addr.ip.startswith('123.123.123.')
 
     def on_getaddr(self, message):
@@ -130,20 +130,15 @@ class AddrTest(BitcoinTestFramework):
         self.log.info('Check that addr message content is relayed and added to addrman')
         addr_source = self.nodes[0].add_p2p_connection(P2PInterface())
         num_receivers = 7
-        receivers = []
-        for _ in range(num_receivers):
-            receivers.append(self.nodes[0].add_p2p_connection(AddrReceiver(test_addr_contents=True)))
-
+        receivers = [
+            self.nodes[0].add_p2p_connection(AddrReceiver(test_addr_contents=True))
+            for _ in range(num_receivers)
+        ]
         # Keep this with length <= 10. Addresses from larger messages are not
         # relayed.
         num_ipv4_addrs = 10
         msg = self.setup_addr_msg(num_ipv4_addrs)
-        with self.nodes[0].assert_debug_log(
-            [
-                'Added {} addresses from 127.0.0.1: 0 tried'.format(num_ipv4_addrs),
-                'received: addr (301 bytes) peer=1',
-            ]
-        ):
+        with self.nodes[0].assert_debug_log([f'Added {num_ipv4_addrs} addresses from 127.0.0.1: 0 tried', 'received: addr (301 bytes) peer=1']):
             self.send_addr_msg(addr_source, msg, receivers)
 
         total_ipv4_received = sum(r.num_ipv4_received for r in receivers)

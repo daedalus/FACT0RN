@@ -41,17 +41,9 @@ def check_ELF_RELRO(executable) -> bool:
     Dynamic section must have BIND_NOW flag
     '''
     elf = pixie.load(executable)
-    have_gnu_relro = False
-    for ph in elf.program_headers:
-        # Note: not checking p_flags == PF_R: here as linkers set the permission differently
-        # This does not affect security: the permission flags of the GNU_RELRO program
-        # header are ignored, the PT_LOAD header determines the effective permissions.
-        # However, the dynamic linker need to write to this area so these are RW.
-        # Glibc itself takes care of mprotecting this area R after relocations are finished.
-        # See also https://marc.info/?l=binutils&m=1498883354122353
-        if ph.p_type == pixie.PT_GNU_RELRO:
-            have_gnu_relro = True
-
+    have_gnu_relro = any(
+        ph.p_type == pixie.PT_GNU_RELRO for ph in elf.program_headers
+    )
     have_bindnow = False
     for flags in elf.query_dyn_tags(pixie.DT_FLAGS):
         assert isinstance(flags, int)
@@ -65,11 +57,7 @@ def check_ELF_Canary(executable) -> bool:
     Check for use of stack canary
     '''
     elf = pixie.load(executable)
-    ok = False
-    for symbol in elf.dyn_symbols:
-        if symbol.name == b'__stack_chk_fail':
-            ok = True
-    return ok
+    return any(symbol.name == b'__stack_chk_fail' for symbol in elf.dyn_symbols)
 
 def check_ELF_separate_code(executable):
     '''
@@ -196,9 +184,7 @@ def check_control_flow(executable) -> bool:
 
     content = binary.get_content_from_virtual_address(binary.entrypoint, 4, lief.Binary.VA_TYPES.AUTO)
 
-    if content == [243, 15, 30, 250]: # endbr64
-        return True
-    return False
+    return content == [243, 15, 30, 250]
 
 
 CHECKS = {
@@ -247,11 +233,9 @@ if __name__ == '__main__':
                 retval = 1
                 continue
 
-            failed: List[str] = []
-            for (name, func) in CHECKS[etype]:
-                if not func(filename):
-                    failed.append(name)
-            if failed:
+            if failed := [
+                name for name, func in CHECKS[etype] if not func(filename)
+            ]:
                 print(f'{filename}: failed {" ".join(failed)}')
                 retval = 1
         except IOError:

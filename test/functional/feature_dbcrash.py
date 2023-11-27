@@ -88,8 +88,7 @@ class ChainstateWriteCrashTest(BitcoinTestFramework):
                 # Any of these RPC calls could throw due to node crash
                 self.start_node(node_index)
                 self.nodes[node_index].waitforblock(expected_tip)
-                utxo_hash = self.nodes[node_index].gettxoutsetinfo()['hash_serialized_2']
-                return utxo_hash
+                return self.nodes[node_index].gettxoutsetinfo()['hash_serialized_2']
             except:
                 # An exception here should mean the node is about to crash.
                 # If bitcoind exits, then try again.  wait_for_node_exit()
@@ -135,11 +134,10 @@ class ChainstateWriteCrashTest(BitcoinTestFramework):
 
         node3_utxo_hash = self.nodes[3].gettxoutsetinfo()['hash_serialized_2']
 
-        # Retrieve all the blocks from node3
-        blocks = []
-        for block_hash in block_hashes:
-            blocks.append([block_hash, self.nodes[3].getblock(block_hash, 0)])
-
+        blocks = [
+            [block_hash, self.nodes[3].getblock(block_hash, 0)]
+            for block_hash in block_hashes
+        ]
         # Deliver each block to each other node
         for i in range(3):
             nodei_utxo_hash = None
@@ -221,11 +219,12 @@ class ChainstateWriteCrashTest(BitcoinTestFramework):
         utxo_list = create_confirmed_utxos(self.nodes[3].getnetworkinfo()['relayfee'], self.nodes[3], 5000)
         self.log.info("Prepped %d utxo entries", len(utxo_list))
 
-        # Sync these blocks with the other nodes
-        block_hashes_to_sync = []
-        for height in range(initial_height + 1, self.nodes[3].getblockcount() + 1):
-            block_hashes_to_sync.append(self.nodes[3].getblockhash(height))
-
+        block_hashes_to_sync = [
+            self.nodes[3].getblockhash(height)
+            for height in range(
+                initial_height + 1, self.nodes[3].getblockcount() + 1
+            )
+        ]
         self.log.debug("Syncing %d blocks with other nodes", len(block_hashes_to_sync))
         # Syncing the blocks could cause nodes to crash, so the test begins here.
         self.sync_node3blocks(block_hashes_to_sync)
